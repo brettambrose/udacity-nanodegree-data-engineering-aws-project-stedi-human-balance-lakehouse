@@ -87,6 +87,12 @@ for path, dirs, files in os.walk(current_dir):
         except Exception as e:
             print(e)
 
+# CREATE S3 FOLDER FOR ATHENA QUERY OUTPUT
+try:
+    s3_client.put_object(Bucket=S3_BUCKET_NAME, Key="query_output/")
+except Exception as e:
+    print(e)
+
 # CREATE GLUE SERVICE ROLE
 
 try:
@@ -180,11 +186,61 @@ try:
 except Exception as e:
     print(e)
 
-# DELETE OBJECTS, ENDPOINTS, AND ROLES
+# CREATE GLUE DATABASE
+
+try:
+    glue_client.create_database(
+        DatabaseInput={"Name": "stedi"}
+    )
+
+except Exception as e:
+    print(e)
+
+# CREATE GLUE LANDING TABLES
+schema_dir = os.getcwd() + "\\schema"
+
+for file in os.listdir(schema_dir):
+    try:
+        table_name = str(file).replace(".json","")
+        s3_subdir = table_name.split("_")[0]
+        json_file = schema_dir + "\\" + file
+        
+        with open(json_file, "r") as schema:
+            schema_json = json.load(schema)
+            
+            glue_client.create_table(
+                DatabaseName=GLUE_DB_NAME,
+                TableInput={
+                    "Name": table_name,
+                    "StorageDescriptor": {
+                        "Columns": schema_json,
+                        "Location": f"s3://{S3_BUCKET_NAME}/{s3_subdir}/landing/",
+                        "InputFormat": "org.apache.hadoop.mapred.TextInputFormat",
+                        "OutputFormat": "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputForma",
+                        "Compressed": False,
+                        "SerdeInfo": {"SerializationLibrary": "org.openx.data.jsonserde.JsonSerDe"}},
+                    "Parameters": {"classification": "json"},
+                    "TableType": "EXTERNAL_TABLE"}
+            )
+
+        print(table_name + " created")
+
+    except Exception as e:
+        print(e)
+
+# DELETE OBJECTS, ENDPOINTS, DB, AND ROLES
 # TO DO: Make a separate script for this
 
 """
-s3_client.delete_bucket(Bucket=BUCKET_NAME)
-iam_client.delete_role(RoleName=GLUE_IAM_ROLE_NAME), 
+s3.Bucket(S3_BUCKET_NAME).objects.all().delete()
+s3_client.delete_bucket(Bucket=S3_BUCKET_NAME)
 
+glue_client.delete_database(Name=GLUE_DB_NAME)
+glue_client.delete_table(DatabaseName=GLUE_DB_NAME, Name="customer_landing")
+
+
+iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="GlueAccess")
+iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="S3Access")
+iam_client.delete_role(RoleName=GLUE_IAM_ROLE_NAME)
 """
+

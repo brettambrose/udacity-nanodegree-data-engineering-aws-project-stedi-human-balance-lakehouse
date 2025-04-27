@@ -1,0 +1,52 @@
+[
+  {
+      "Name": "customerName",
+      "Type": "string",
+      "Comment": ""
+  },
+  {
+      "Name": "email",
+      "Type": "string",
+      "Comment": ""
+  },
+  {
+      "Name": "phone",
+      "Type": "string",
+      "Comment": ""
+  },
+  {
+      "Name": "birthDay",
+      "Type": "string",
+      "Comment": ""
+  },
+  {
+      "Name": "serialNumber",
+      "Type": "string",
+      "Comment": ""
+  },
+  {
+      "Name": "registrationDate",
+      "Type": "bigint",
+      "Comment": ""
+  },
+  {
+      "Name": "lastUpdateDate",
+      "Type": "bigint",
+      "Comment": ""
+  },
+  {
+      "Name": "shareWithResearchAsOfDate",
+      "Type": "bigint",
+      "Comment": ""
+  },
+  {
+      "Name": "shareWithPublicAsOfDate",
+      "Type": "bigint",
+      "Comment": ""
+  },
+  {
+      "Name": "shareWithFriendsAsOfDate",
+      "Type": "bigint",
+      "Comment": ""
+  }
+]
