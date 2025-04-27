@@ -10,14 +10,23 @@ Building a data lakehouse solution for sensor data that trains a machine learnin
     3. [Workflow Environment](#workflow-environment-configuration)
 4. [Project Datasets](#project-datasets)
 5. [Project Requirements](#project-requirements)
+    1. [TO DO: Filter Reading Prior to Research Consent Date](#to-do-filter-reading-prior-to-research-consent-date)
+    2. [TO DO: Anonymize Data](#to-do-anonymize-data)
 6. [Insfrastructure Setup](#infrastructure-setup)
-    1. [Create S3 Bucket](#create-s3-bucket)
-    2. [Describe Available VPCs](#describe-available-vpcs)
-    3. [Describe Available Route Tables](#describe-available-route-tables)
-    4. [Create VPC Gateway with S3 Gateway Endpoint](#create-vpc-gateway-with-s3-gateway-endpoint)
-    5. [Create Glue Service Role](#create-glue-service-role)
-    6. [Grant Glue Privileges on S3 Bucket](#grant-glue-privileges-on-s3-bucket)
-    7. [Attach Glue Policy](#attach-glue-policy)
+    1. [Option 1 - Using Infrastructure as Code](#option-1---using-infrastructure-as-code)
+    2. [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console)
+        1. [Create S3 Bucket](#create-s3-bucket)
+        2. [Upload the Data Files into S3](#upload-the-data-files-into-s3)
+        3. [Create S3 Directory for Query Results](#create-s3-directory-for-query-results)
+        4. [Describe Available VPCs](#describe-available-vpcs)
+        5. [Describe Available Route Tables](#describe-available-route-tables)
+        6. [Create VPC Gateway with S3 Gateway Endpoint](#create-vpc-gateway-with-s3-gateway-endpoint)
+        7. [Create Glue Service Role](#create-glue-service-role)
+        8. [Grant Glue Privileges on S3 Bucket](#grant-glue-privileges-on-s3-bucket)
+        9. [Attach Glue Policy](#attach-glue-policy)
+7. [Job Execution Steps](#job-execution-steps)
+8. [Validation](#validation)
+9. [Infrastructure Decommission](#infrastructure-decommission)
 
 
 ## Project Details
@@ -157,6 +166,12 @@ See the ERD below to understand the desired state.
 
 ![Lakehouse ERD](/images/2025-04-26%2012_34_00-STEDI%20Human%20Balance%20Analytics%20-%20Project%20Instructions.png)
 
+### TO DO: Filter Reading Prior to Research Consent Date
+When creating the Glue Job to join data from the accelerometer readings and the customer table, filter out any readings that were prior to the research consent date. This will ensure consent was in place at the time that data was gathered. This helps in the case that in the future the customer revokes consent. We can be sure that the data we used for research was used when consent was in place for that particular data.
+
+### TO DO: Anonymize Data
+Anonymize the final curated table so that it is not subject to GDPR or other privacy regulations, in case a customer requests deletion of PII, we will not be in violation by retaining PII data --remove email, and any other personally identifying information up front.
+
 ## Testing and Validation Steps
 
 For stage of developing the lakehouse, the following row counts should be in each table:
@@ -177,12 +192,22 @@ For stage of developing the lakehouse, the following row counts should be in eac
 
 ## Infrastructure Setup
 
-**NOTE:** The instructions below are for manual setup through the AWS Console. These can be skipped by deploying infrastructure via Infrastructure as Code (IaC) with the following steps:
+### Option 1 - Using Infrastructure as Code
+
+**NOTE:** The instructions in the [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console) section contains all manual steps to setup the infrastructure for this project. These can be skipped by deploying infrastructure via Infrastructure as Code (IaC) with the following steps:
 
 1. adding AWS credentials to [lakehouse.cfg](/lakehouse.cfg)
 2. executing [infra_deploy.py](/infra_deploy.py)
 
-### Create S3 Bucket
+Make sure the user associated with the AWS credentials has the following permission policies attached:
+AmazonS3FullAccess
+AmazonVPCFullAccess
+AWSGlueConsoleFullAccess
+IAMFullAccess
+
+### Option 2 - Manual via AWS Console
+
+#### Create S3 Bucket
 
 Buckets are storage locations within AWS, that have a hierarchical directory-like structure. Once you create an S3 bucket, you can create as many sub-directories, and files as you want. The bucket is the "parent" of all of these directories and files.
 
@@ -190,7 +215,19 @@ Using the AWS CLI input the following command:
 
 ```aws s3 mb s3://stedi-lakehouse-ba```
 
-### Describe Available VPCs
+#### Upload the data files into S3
+
+All data that should be S3 to start this project can be found in the [data](/data/) folder.  Upload each of the following as their own directory (the files will upload with them) using the S3 upload feature in the stedi-lakehouse-ba bucket.
+
+![S3 Bucket Upload](/images/2025-04-27%2016_46_34-stedi-lakehouse-ba%20-%20S3%20bucket%20_%20S3%20_%20us-east-1.png)
+
+#### Create S3 directory for query results
+
+A separate S3 folder is required for Athena query results.  Use the Create Folder feature in S3 in the stedi-lakehouse-ba bucket to do create this.
+
+![S3 Query Result Folder Create](/images/2025-04-27%2016_49_15-stedi-lakehouse-ba%20-%20S3%20bucket%20_%20S3%20_%20us-east-1.png)
+
+#### Describe Available VPCs
 
 This cloud project runs resources within a Virtual Private Cloud (VPC).  Glue jobs will run in a secure zone without access to anything outside the virtual network.
 
@@ -231,7 +268,7 @@ This should return something like this:
 }</pre>
 
 
-### Describe Available Route Tables
+#### Describe Available Route Tables
 A routing table is an entity that stores the network paths to various locations.  In this project, the routing table will store the path to S3 from within the VPC.  A routing table is required to configure with the VPC Gateway used in this project.
 
 In the AWS CLI input the following command:
@@ -277,7 +314,7 @@ This should return something like this:
     ]
 }</pre>
 
-### Create VPC Gateway with S3 Gateway Endpoint
+#### Create VPC Gateway with S3 Gateway Endpoint
 
 A VPC Gateway is a network entity that gives access to outside networks and resources. S3 will not initially reside in the available VPC.  An S3 Gateway Endpoint will be required to establish a secure connection between the VPC and S3. Once the endpoint is created, the Glue jobs (or any other resource within the VPC) will have a network path to reach S3.
 
@@ -311,7 +348,7 @@ This should return something like this:
     }</pre>
 
 
-### Create Glue Service Role
+#### Create Glue Service Role
 
 AWS uses Identity and Access Management (IAM) service to manage users, and roles (which can be reused by users and services). A Service Role in IAM is a Role that is used by an AWS Service to interact with cloud resources.
 
@@ -478,3 +515,35 @@ Using the AWS CLI input the following command (including the policy):
         }
     ]
 }'</pre>
+
+
+## Job Execution Steps
+
+Each job (except for the first) is sequentially dependent and must be executed in order. The [execute_glue_jobs.py](/execute_glue_jobs.py) script uses boto3 to initiate a Glue client session to execute these jobs in sequence.
+
+Job order sequence:
+
+1. [customer_landing_to_trusted.py](/jobs/customer_landing_to_trusted.py)
+2. [accelerometer_landing_to_trusted.py](/jobs/accelerometer_landing_to_trusted.py)
+3. [customer_trusted_to_curated.py](/jobs/customer_trusted_to_curated.py)
+4. [step_trainer_trusted.py](/jobs/step_trainer_trusted.py)
+5. [machine_learning_curated.py](/jobs/machine_learning_curated.py)
+
+The above scripts are found in the [jobs](/jobs/) folder and were "written" first using the AWS Glue Studio GUI then generated and downloaded into this library.  AWS Glue libs (see https://github.com/awslabs/aws-glue-libs/) are required to run these jobs locally.
+
+## Validation
+Once the jobs complete, validate expected record counts using the [validation_queries.sql](/validation/validation_queries.sql) script in AWS Athena.  In the [validation](/validation/) folder, there are reference images for validated result sets AND successful job runs using the AWS Glue job monitoring consoole.
+
+[job_success](/validation/job_success/) - shows an image of successful run for each job.
+
+[query_results](/validation/query_results/) - shows an image of query results for a few sample tables, as well as final validation of record counts for each table
+
+
+## Infrastructure Decommission
+
+Ensure the following steps are completed when it's time to decommission. [infra_decomm.py](/infra_decomm.py) can be executed to automate this, rather than doing so manually in the AWS console.
+
+1. Delete the Glue database
+2. Delete the S3 bucket along with its objects
+3. Detach policies from the IAM role and delete the role itself
+4. Delete the VPC endpoint
