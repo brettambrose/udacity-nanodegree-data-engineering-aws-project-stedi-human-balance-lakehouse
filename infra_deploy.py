@@ -229,7 +229,7 @@ schema_dir = os.getcwd() + "\\schema"
 for file in os.listdir(schema_dir):
     try:
         table_name = str(file).replace(".json","")
-        s3_subdir = table_name.split("_")[0]
+        s3_subdir = table_name.replace("_landing","")
         json_file = schema_dir + "\\" + file
         
         with open(json_file, "r") as schema:
