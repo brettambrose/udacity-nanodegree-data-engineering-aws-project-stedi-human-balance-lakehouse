@@ -2,7 +2,6 @@ import json
 import configparser
 import os
 import boto3
-from botocore.exceptions import ClientError
 
 config = configparser.ConfigParser()
 config.read_file(open('lakehouse.cfg'))
@@ -12,10 +11,11 @@ KEY           = config.get("AWS","KEY")
 SECRET        = config.get("AWS", "SECRET")
 
 # S3 BUCKET
-BUCKET_NAME   = config.get("S3","BUCKET_NAME")
+S3_BUCKET_NAME   = config.get("S3","S3_BUCKET_NAME")
 
 # GLUE IAM ROLE
 GLUE_IAM_ROLE_NAME = config.get("GLUE","GLUE_IAM_ROLE_NAME")
+GLUE_DB_NAME        = config.get("GLUE","GLUE_DB_NAME")
 
 s3 = boto3.resource("s3",
                     region_name="us-east-1",
@@ -29,12 +29,6 @@ s3_client = boto3.client("s3",
                          aws_secret_access_key=SECRET
                         )
 
-ec2 = boto3.resource("ec2",
-                     region_name="us-east-1",
-                     aws_access_key_id=KEY,
-                     aws_secret_access_key=SECRET
-                    )
-
 ec2_client = boto3.client("ec2",
                           region_name="us-east-1",
                           aws_access_key_id=KEY,
@@ -47,6 +41,12 @@ iam_client = boto3.client("iam",
                           aws_secret_access_key=SECRET
                          )
 
+glue_client = boto3.client("glue",
+                          region_name="us-east-1",
+                          aws_access_key_id=KEY,
+                          aws_secret_access_key=SECRET
+                         )
+
 # GET VPC ID
 vpc_id = ec2_client.describe_vpcs()["Vpcs"][0]["VpcId"]
 
@@ -54,6 +54,9 @@ vpc_id = ec2_client.describe_vpcs()["Vpcs"][0]["VpcId"]
 route_table_id = ec2_client.describe_route_tables()["RouteTables"][0]["RouteTableId"]
 
 # CREATE VPC GATEWAY WITH S3 GATEWAY ENDPOINT
+
+print("Creating VPC Endpoint...")
+
 try:
     ec2_client.create_vpc_endpoint(
         VpcId=vpc_id,
@@ -64,6 +67,9 @@ except Exception as e:
     print(e)
 
 # CREATE S3 BUCKET
+
+print("Creating S3 bucket...")
+
 try:
     s3_client.create_bucket(
         Bucket="stedi-lakehouse-ba"
@@ -73,6 +79,9 @@ except Exception as e:
 
 # COPY DATA INTO S3 BUCKET
 # Solution found: https://stackoverflow.com/questions/25380774/upload-a-directory-to-s3-with-boto/70841601#70841601
+
+print("Loading data into S3...")
+
 current_dir = os.getcwd() + "\\data"
 data_dir = os.listdir(current_dir)
 
@@ -83,17 +92,24 @@ for path, dirs, files in os.walk(current_dir):
         local_file = os.path.join(path, file)
         
         try:
-            s3_client.upload_file(local_file, BUCKET_NAME, s3_file)
+            s3_client.upload_file(local_file, S3_BUCKET_NAME, s3_file)
         except Exception as e:
             print(e)
+        
+        print(s3_file + " loaded into S3")
 
 # CREATE S3 FOLDER FOR ATHENA QUERY OUTPUT
+
+print("Creating S3 folder for query output...")
+
 try:
     s3_client.put_object(Bucket=S3_BUCKET_NAME, Key="query_output/")
 except Exception as e:
     print(e)
 
 # CREATE GLUE SERVICE ROLE
+
+print("Creating Glue IAM Service Role...")
 
 try:
     iam_client.create_role(
@@ -110,6 +126,8 @@ except Exception as e:
 
 # ATTACH S3 ACCESS POLICY
 
+print("Attatching S3 policies to role...")
+
 try:
     iam_client.put_role_policy(
         RoleName=GLUE_IAM_ROLE_NAME,
@@ -119,16 +137,18 @@ try:
              "Statement": [{"Sid": "ListObjectsInBucket",
                             "Effect": "Allow",
                             "Action": ["s3:ListBucket"],
-                            "Resource": ["arn:aws:s3:::" + BUCKET_NAME]},
+                            "Resource": ["arn:aws:s3:::" + S3_BUCKET_NAME]},
                            {"Sid": "AllObjectActions",
                             "Effect": "Allow",
                             "Action": ["s3:*Object"],
-                            "Resource": ["arn:aws:s3:::" + BUCKET_NAME + "/*"]}]})
+                            "Resource": ["arn:aws:s3:::" + S3_BUCKET_NAME + "/*"]}]})
     )
 except Exception as e:
     print(e)
 
 # ATTACH GLUE POLICIES
+
+print("Attatching Glue policies to role...")
 
 try:
     iam_client.put_role_policy(
@@ -188,15 +208,22 @@ except Exception as e:
 
 # CREATE GLUE DATABASE
 
+print("Creating Glue database...")
+
 try:
     glue_client.create_database(
-        DatabaseInput={"Name": "stedi"}
+        DatabaseInput={"Name": GLUE_DB_NAME}
     )
+
+    print(GLUE_DB_NAME + " created")
 
 except Exception as e:
     print(e)
 
 # CREATE GLUE LANDING TABLES
+
+print("Creating Glue landing tables...")
+
 schema_dir = os.getcwd() + "\\schema"
 
 for file in os.listdir(schema_dir):
@@ -227,23 +254,3 @@ for file in os.listdir(schema_dir):
 
     except Exception as e:
         print(e)
-
-# DELETE OBJECTS, ENDPOINTS, DB, AND ROLES
-# TO DO: Make a separate script for this
-
-"""
-s3.Bucket(S3_BUCKET_NAME).objects.all().delete()
-s3_client.delete_bucket(Bucket=S3_BUCKET_NAME)
-
-glue_client.delete_database(Name=GLUE_DB_NAME)
-glue_client.delete_table(DatabaseName=GLUE_DB_NAME, Name="customer_landing")
-
-
-iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="GlueAccess")
-iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="S3Access")
-iam_client.delete_role(RoleName=GLUE_IAM_ROLE_NAME)
-
-vpc_endpoint_id = ec2_client.describe_vpc_endpoints()["VpcEndpoints"][0]["VpcEndpointId"]
-ec2_client.delete_vpc_endpoints(VpcEndpointIds=[vpc_endpoint_id])
-"""
-
