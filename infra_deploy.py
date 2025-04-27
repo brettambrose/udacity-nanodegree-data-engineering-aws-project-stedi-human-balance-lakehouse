@@ -242,5 +242,8 @@ glue_client.delete_table(DatabaseName=GLUE_DB_NAME, Name="customer_landing")
 iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="GlueAccess")
 iam_client.delete_role_policy(RoleName=GLUE_IAM_ROLE_NAME, PolicyName="S3Access")
 iam_client.delete_role(RoleName=GLUE_IAM_ROLE_NAME)
+
+vpc_endpoint_id = ec2_client.describe_vpc_endpoints()["VpcEndpoints"][0]["VpcEndpointId"]
+ec2_client.delete_vpc_endpoints(VpcEndpointIds=[vpc_endpoint_id])
 """
 
