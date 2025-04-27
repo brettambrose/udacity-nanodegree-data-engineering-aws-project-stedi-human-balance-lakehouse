@@ -141,7 +141,7 @@ Create two AWS Glue Jobs that do the following:
 3. Validate the Glue job is successful and only contains Customer Records from people who agreed to share their data. 
 4. Query the Glue customer_trusted table with Athena and take a screenshot of the data. Name the screenshot customer_trusted(.png,.jpeg, etc.).
 
-The Data Science team also discovered data quality issues with the Customer Data.  Each STEDI Step Trainer purchased by a customer has a a unique **serial number**.  However, a defect on the fulfillment website resulted in the same 30 serial numbers being assigned to millions of customers. Only a small subset of customers have received their Step Trainers so far, but they are submitting Step Trainer data over the IoT Network (Landing Zone).  Fortunately, the Step Trainer records contain the currect serial numbers.  The challenge is now associating customers to Step Trainers.
+The Data Science team also discovered data quality issues with the Customer Data.  Each STEDI Step Trainer purchased by a customer has a unique **serial number**.  However, a defect on the fulfillment website resulted in the same 30 serial numbers being assigned to millions of customers. Only a small subset of customers have received their Step Trainers so far, but they are submitting Step Trainer data over the IoT Network (Landing Zone).  Fortunately, the Step Trainer records contain the correct serial numbers.  The challenge is now associating customers to Step Trainers.
 
 To remediate the data quality issue:
 
