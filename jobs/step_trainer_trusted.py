@@ -24,7 +24,7 @@ job.init(args['JOB_NAME'], args)
 CustomerCurated_node1745730465286 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="customer_curated", transformation_ctx="CustomerCurated_node1745730465286")
 
 # Script generated for node Step Trainer Landing
-StepTrainerLanding_node1745730513812 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="step_trainer_landing", transformation_ctx="StepTrainerLanding_node1745730513812")
+StepTrainerLanding_node1745730513812 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/step_trainer/landing/"], "recurse": True}, transformation_ctx="StepTrainerLanding_node1745730513812")
 
 # Script generated for node Join Step Trainer Landing to Customer Curated and Acclerometer Trusted
 SqlQuery0 = '''

@@ -19,7 +19,7 @@ job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
 # Script generated for node Customer Landing
-CustomerLanding_node1745728481261 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="customer_landing", transformation_ctx="CustomerLanding_node1745728481261")
+CustomerLanding_node1745728481261 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/customer/landing/"], "recurse": True}, transformation_ctx="CustomerLanding_node1745728481261")
 
 # Script generated for node Privacy Filter
 SqlQuery0 = '''
