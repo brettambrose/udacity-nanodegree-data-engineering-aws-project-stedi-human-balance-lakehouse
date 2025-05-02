@@ -2,17 +2,18 @@
 Building a data lakehouse solution for sensor data that trains a machine learning model.
 
 ## Table of Contents
-1. [Project Details](#project-details)
-2. [Project Summary](#project-summary)
-3. [Project Environment](#project-environment)
+1. [AWS Prerequisites](#aws-prerequsites)
+2. [Project Details](#project-details)
+3. [Project Summary](#project-summary)
+4. [Project Environment](#project-environment)
     1. [AWS Environment](#aws-environment)
     2. [Github Environment](#github-environment)
     3. [Workflow Environment](#workflow-environment-configuration)
-4. [Project Datasets](#project-datasets)
-5. [Project Requirements](#project-requirements)
+5. [Project Datasets](#project-datasets)
+6. [Project Requirements](#project-requirements)
     1. [TO DO: Filter Reading Prior to Research Consent Date](#to-do-filter-reading-prior-to-research-consent-date)
     2. [TO DO: Anonymize Data](#to-do-anonymize-data)
-6. [Insfrastructure Setup](#infrastructure-setup)
+7. [Insfrastructure Setup](#infrastructure-setup)
     1. [Option 1 - Using Infrastructure as Code](#option-1---using-infrastructure-as-code)
     2. [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console)
         1. [Create S3 Bucket](#create-s3-bucket)
@@ -24,10 +25,17 @@ Building a data lakehouse solution for sensor data that trains a machine learnin
         7. [Create Glue Service Role](#create-glue-service-role)
         8. [Grant Glue Privileges on S3 Bucket](#grant-glue-privileges-on-s3-bucket)
         9. [Attach Glue Policy](#attach-glue-policy)
-7. [Job Execution Steps](#job-execution-steps)
-8. [Validation](#validation)
-9. [Infrastructure Decommission](#infrastructure-decommission)
+8. [Job Execution Steps](#job-execution-steps)
+9. [Validation](#validation)
+10. [Infrastructure Decommission](#infrastructure-decommission)
 
+## AWS PREREQUSITES
+1. An AWS Account with an IAM User with the following permissions
+    - AdminstratorAccess
+    - AmazonRedshiftFullAccess
+    - AmazonS3FullAccess
+2. Local AWS CLI (download here: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+    - Local .aws file will need to be configured (see: https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-files.html#cli-configure-files-methods)
 
 ## Project Details
 The STEDI Team has been hard at work developing a hardware STEDI Step Trainer that:
@@ -194,16 +202,16 @@ For stage of developing the lakehouse, the following row counts should be in eac
 
 ### Option 1 - Using Infrastructure as Code
 
-**NOTE:** The instructions in the [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console) section contains all manual steps to setup the infrastructure for this project. These can be skipped by deploying infrastructure via Infrastructure as Code (IaC) with the following steps:
+**NOTE:** The instructions in the [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console) section contains all manual steps to setup the infrastructure for this project. 
 
-1. adding AWS credentials to [lakehouse.cfg](/lakehouse.cfg)
-2. executing [infra_deploy.py](/infra_deploy.py)
-
-Make sure the user associated with the AWS credentials has the following permission policies attached:
-AmazonS3FullAccess
-AmazonVPCFullAccess
-AWSGlueConsoleFullAccess
-IAMFullAccess
+This can be skipped by running [infra_deploy.py](/deploy/infra_deploy.py) in the [deploy](/deploy/) folder  This script will:
+1. Create an IAM Role that has permission to use the Redshift service on AWS
+2. Attach the  S3 and Glue policies to the IAM Role
+3. Create a VPC Endpoint for S3
+4. Create the S3 bucket
+5. Load project data from the [data](/data/) folder into S3
+6. Create the Glue DB
+7. Create the tables in the Glue DB
 
 ### Option 2 - Manual via AWS Console
 
