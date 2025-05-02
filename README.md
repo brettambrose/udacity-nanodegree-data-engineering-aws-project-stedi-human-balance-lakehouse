@@ -15,6 +15,8 @@ Building a data lakehouse solution for sensor data that trains a machine learnin
     2. [TO DO: Anonymize Data](#to-do-anonymize-data)
 7. [Insfrastructure Setup](#infrastructure-setup)
     1. [Option 1 - Using Infrastructure as Code](#option-1---using-infrastructure-as-code)
+        1. [Deploy Infrastructure](#deploy-infrastructure/)
+        2. [Load S3 Bucket and Create Glue Landing Tables](#load-s3-buckets-and-create-glue-landing-tables)
     2. [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console)
         1. [Create S3 Bucket](#create-s3-bucket)
         2. [Upload the Data Files into S3](#upload-the-data-files-into-s3)
@@ -204,14 +206,29 @@ For stage of developing the lakehouse, the following row counts should be in eac
 
 **NOTE:** The instructions in the [Option 2 - Manual via AWS Console](#option-2---manual-via-aws-console) section contains all manual steps to setup the infrastructure for this project. 
 
-This can be skipped by running [infra_deploy.py](/deploy/infra_deploy.py) in the [deploy](/deploy/) folder  This script will:
+This an be skipped by running the following scripts in the [deploy](/deploy/) folder:
+
+- [infra_deploy](/deploy/infra_deploy.py)
+- [load_bucket.py](/deploy/load_bucket.py)
+
+#### Deploy Infrastructure
+
+Running [infra_deploy.py](/deploy/infra_deploy.py) will...
+
 1. Create an IAM Role that has permission to use the Redshift service on AWS
 2. Attach the  S3 and Glue policies to the IAM Role
 3. Create a VPC Endpoint for S3
 4. Create the S3 bucket
-5. Load project data from the [data](/data/) folder into S3
-6. Create the Glue DB
-7. Create the tables in the Glue DB
+5. Create the Glue DB
+6. Create the tables in the Glue DB
+
+#### Load S3 Bucket and Create Glue Landing Tables
+
+Running [load_bucket.py](/deploy/load_bucket.py) will...
+
+1. Load the S3 bucket created in [infra_deploy.py](/deploy/infra_deploy.py) with datasets from the [data](/data/) folder
+2. Create the Glue landing tables derived from the [data](/data/) folder datasets
+
 
 ### Option 2 - Manual via AWS Console
 
@@ -549,7 +566,7 @@ Once the jobs complete, validate expected record counts using the [validation_qu
 
 ## Infrastructure Decommission
 
-Ensure the following steps are completed when it's time to decommission. [infra_decomm.py](/infra_decomm.py) can be executed to automate this, rather than doing so manually in the AWS console.
+Ensure the following steps are completed when it's time to decommission. [infra_decomm.py](/deploy/infra_decomm.py) can be executed to automate this, rather than doing so manually in the AWS console.
 
 1. Delete the Glue database
 2. Delete the S3 bucket along with its objects
