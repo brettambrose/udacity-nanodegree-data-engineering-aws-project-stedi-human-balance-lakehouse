@@ -3,8 +3,9 @@ import json
 import configparser
 import os
 
+main_config_path = "lakehouse.cfg"
 main_config = configparser.ConfigParser()
-main_config.read("lakehouse.cfg")
+main_config.read(main_config_path)
 
 aws_creds_path = os.path.expanduser("~\\.aws\\credentials")
 aws_creds = configparser.ConfigParser()
