@@ -1,5 +1,6 @@
 import configparser
 import boto3
+import os
 
 def run_glue_job(job,glue_client):
     """
@@ -39,8 +40,14 @@ def run_glue_job_workflow(job_list,glue_client):
 
 
 def main():
-    config = configparser.ConfigParser()
-    config.read_file(open('lakehouse.cfg'))
+
+    aws_creds_path = os.path.expanduser("~\\.aws\\credentials")
+    aws_creds = configparser.ConfigParser()
+    aws_creds.read(aws_creds_path)
+
+    aws_config_path = os.path.expanduser("~\\.aws\\config")
+    aws_config = configparser.ConfigParser()
+    aws_config.read(aws_config_path)
     
     job_list = ["customer_landing_to_trusted", 
                 "accelerometer_landing_to_trusted", 
@@ -49,9 +56,9 @@ def main():
                 "machine_learning_curated"]
 
     glue_client = boto3.client("glue", 
-                               region_name="us-east-1",
-                               aws_access_key_id=config.get("AWS","KEY"),
-                               aws_secret_access_key=config.get("AWS", "SECRET")
+                               aws_access_key_id=aws_creds.get("default","aws_access_key_id"),
+                               aws_secret_access_key=aws_creds.get("default","aws_secret_access_key"),
+                               region_name=aws_config.get("default","region")
                               )
 
     run_glue_job_workflow(job_list,glue_client)
