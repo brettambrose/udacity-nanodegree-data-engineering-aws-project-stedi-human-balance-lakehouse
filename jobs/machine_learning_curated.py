@@ -4,7 +4,10 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
+from awsgluedq.transforms import EvaluateDataQuality
+from awsglue.dynamicframe import DynamicFrame
 from awsglue import DynamicFrame
+from pyspark.sql import functions as SqlFuncs
 
 def sparkSqlQuery(glueContext, query, mapping, transformation_ctx) -> DynamicFrame:
     for alias, frame in mapping.items():
@@ -18,14 +21,21 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
-# Script generated for node Step Trainer Trusted
-StepTrainerTrusted_node1745772283838 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="step_trainer_trusted", transformation_ctx="StepTrainerTrusted_node1745772283838")
+# Default ruleset used by all target nodes with data quality enabled
+DEFAULT_DATA_QUALITY_RULESET = """
+    Rules = [
+        ColumnCount > 0
+    ]
+"""
 
 # Script generated for node Customer Curated
-CustomerCurated_node1745772287599 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="customer_curated", transformation_ctx="CustomerCurated_node1745772287599")
+CustomerCurated_node1746296432391 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/customer/curated/"], "recurse": True}, transformation_ctx="CustomerCurated_node1746296432391")
 
 # Script generated for node Accelerometer Trusted
-AccelerometerTrusted_node1745772286878 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="accelerometer_trusted", transformation_ctx="AccelerometerTrusted_node1745772286878")
+AccelerometerTrusted_node1746296904392 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/accelerometer/trusted/"], "recurse": True}, transformation_ctx="AccelerometerTrusted_node1746296904392")
+
+# Script generated for node Step Trainer Trusted
+StepTrainerTrusted_node1746297942001 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/step_trainer/trusted/"], "recurse": True}, transformation_ctx="StepTrainerTrusted_node1746297942001")
 
 # Script generated for node Join Step Trainer and Accelerometer Trusted to Customer Curated
 SqlQuery0 = '''
@@ -52,11 +62,15 @@ join customer_curated c
  on s.serialnumber = c.serialnumber
  and a.user = c.email
 '''
-JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1745772469018 = sparkSqlQuery(glueContext, query = SqlQuery0, mapping = {"step_trainer_trusted":StepTrainerTrusted_node1745772283838, "accelerometer_trusted":AccelerometerTrusted_node1745772286878, "customer_curated":CustomerCurated_node1745772287599}, transformation_ctx = "JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1745772469018")
+JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1746296481999 = sparkSqlQuery(glueContext, query = SqlQuery0, mapping = {"customer_curated":CustomerCurated_node1746296432391, "accelerometer_trusted":AccelerometerTrusted_node1746296904392, "step_trainer_trusted":StepTrainerTrusted_node1746297942001}, transformation_ctx = "JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1746296481999")
+
+# Script generated for node Drop Duplicates
+DropDuplicates_node1746297252095 =  DynamicFrame.fromDF(JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1746296481999.toDF().dropDuplicates(), glueContext, "DropDuplicates_node1746297252095")
 
 # Script generated for node Machine Learning Curated
-MachineLearningCurated_node1745772524333 = glueContext.getSink(path="s3://stedi-lakehouse-ba/machine_learning/curated/", connection_type="s3", updateBehavior="UPDATE_IN_DATABASE", partitionKeys=[], enableUpdateCatalog=True, transformation_ctx="MachineLearningCurated_node1745772524333")
-MachineLearningCurated_node1745772524333.setCatalogInfo(catalogDatabase="stedi",catalogTableName="machine_learning_curated")
-MachineLearningCurated_node1745772524333.setFormat("json")
-MachineLearningCurated_node1745772524333.writeFrame(JoinStepTrainerandAccelerometerTrustedtoCustomerCurated_node1745772469018)
+EvaluateDataQuality().process_rows(frame=DropDuplicates_node1746297252095, ruleset=DEFAULT_DATA_QUALITY_RULESET, publishing_options={"dataQualityEvaluationContext": "EvaluateDataQuality_node1746296395948", "enableDataQualityResultsPublishing": True}, additional_options={"dataQualityResultsPublishing.strategy": "BEST_EFFORT", "observations.scope": "ALL"})
+MachineLearningCurated_node1746296572862 = glueContext.getSink(path="s3://stedi-lakehouse-ba/machine_learning/curated/", connection_type="s3", updateBehavior="UPDATE_IN_DATABASE", partitionKeys=[], enableUpdateCatalog=True, transformation_ctx="MachineLearningCurated_node1746296572862")
+MachineLearningCurated_node1746296572862.setCatalogInfo(catalogDatabase="stedi",catalogTableName="machine_learning_curated")
+MachineLearningCurated_node1746296572862.setFormat("json")
+MachineLearningCurated_node1746296572862.writeFrame(DropDuplicates_node1746297252095)
 job.commit()

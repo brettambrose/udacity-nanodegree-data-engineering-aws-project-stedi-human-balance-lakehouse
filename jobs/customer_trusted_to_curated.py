@@ -4,6 +4,7 @@ from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
+from awsgluedq.transforms import EvaluateDataQuality
 from awsglue.dynamicframe import DynamicFrame
 from awsglue import DynamicFrame
 from pyspark.sql import functions as SqlFuncs
@@ -20,11 +21,18 @@ spark = glueContext.spark_session
 job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
+# Default ruleset used by all target nodes with data quality enabled
+DEFAULT_DATA_QUALITY_RULESET = """
+    Rules = [
+        ColumnCount > 0
+    ]
+"""
+
 # Script generated for node Customer Trusted
-CustomerTrusted_node1745729750426 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="customer_trusted", transformation_ctx="CustomerTrusted_node1745729750426")
+CustomerTrusted_node1746296432391 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/customer/trusted/"], "recurse": True}, transformation_ctx="CustomerTrusted_node1746296432391")
 
 # Script generated for node Accelerometer Trusted
-AccelerometerTrusted_node1745729852647 = glueContext.create_dynamic_frame.from_catalog(database="stedi", table_name="accelerometer_trusted", transformation_ctx="AccelerometerTrusted_node1745729852647")
+AccelerometerTrusted_node1746296904392 = glueContext.create_dynamic_frame.from_options(format_options={"multiLine": "false"}, connection_type="s3", format="json", connection_options={"paths": ["s3://stedi-lakehouse-ba/accelerometer/trusted/"], "recurse": True}, transformation_ctx="AccelerometerTrusted_node1746296904392")
 
 # Script generated for node Join Customer Trusted to Accelerometer Trusted
 SqlQuery0 = '''
@@ -33,14 +41,15 @@ from customer_trusted c
 join accelerometer_trusted a 
  on c.email = a.user
 '''
-JoinCustomerTrustedtoAccelerometerTrusted_node1745729880573 = sparkSqlQuery(glueContext, query = SqlQuery0, mapping = {"customer_trusted":CustomerTrusted_node1745729750426, "accelerometer_trusted":AccelerometerTrusted_node1745729852647}, transformation_ctx = "JoinCustomerTrustedtoAccelerometerTrusted_node1745729880573")
+JoinCustomerTrustedtoAccelerometerTrusted_node1746296481999 = sparkSqlQuery(glueContext, query = SqlQuery0, mapping = {"customer_trusted":CustomerTrusted_node1746296432391, "accelerometer_trusted":AccelerometerTrusted_node1746296904392}, transformation_ctx = "JoinCustomerTrustedtoAccelerometerTrusted_node1746296481999")
 
 # Script generated for node Drop Duplicates
-DropDuplicates_node1745731426014 =  DynamicFrame.fromDF(JoinCustomerTrustedtoAccelerometerTrusted_node1745729880573.toDF().dropDuplicates(), glueContext, "DropDuplicates_node1745731426014")
+DropDuplicates_node1746297252095 =  DynamicFrame.fromDF(JoinCustomerTrustedtoAccelerometerTrusted_node1746296481999.toDF().dropDuplicates(), glueContext, "DropDuplicates_node1746297252095")
 
 # Script generated for node Customer Curated
-CustomerCurated_node1745729939534 = glueContext.getSink(path="s3://stedi-lakehouse-ba/customer/curated/", connection_type="s3", updateBehavior="UPDATE_IN_DATABASE", partitionKeys=[], enableUpdateCatalog=True, transformation_ctx="CustomerCurated_node1745729939534")
-CustomerCurated_node1745729939534.setCatalogInfo(catalogDatabase="stedi",catalogTableName="customer_curated")
-CustomerCurated_node1745729939534.setFormat("json")
-CustomerCurated_node1745729939534.writeFrame(DropDuplicates_node1745731426014)
+EvaluateDataQuality().process_rows(frame=DropDuplicates_node1746297252095, ruleset=DEFAULT_DATA_QUALITY_RULESET, publishing_options={"dataQualityEvaluationContext": "EvaluateDataQuality_node1746296395948", "enableDataQualityResultsPublishing": True}, additional_options={"dataQualityResultsPublishing.strategy": "BEST_EFFORT", "observations.scope": "ALL"})
+CustomerCurated_node1746296572862 = glueContext.getSink(path="s3://stedi-lakehouse-ba/customer/curated/", connection_type="s3", updateBehavior="UPDATE_IN_DATABASE", partitionKeys=[], enableUpdateCatalog=True, transformation_ctx="CustomerCurated_node1746296572862")
+CustomerCurated_node1746296572862.setCatalogInfo(catalogDatabase="stedi",catalogTableName="customer_curated")
+CustomerCurated_node1746296572862.setFormat("json")
+CustomerCurated_node1746296572862.writeFrame(DropDuplicates_node1746297252095)
 job.commit()
