@@ -2,9 +2,14 @@ import boto3
 import json
 import configparser
 import os
+import sys
 
+sys.path.append(os.getcwd())
+from util.config_functions import modify_config_file
+
+main_config_path = "lakehouse.cfg"
 main_config = configparser.ConfigParser()
-main_config.read("lakehouse.cfg")
+main_config.read(main_config_path)
 
 aws_creds_path = os.path.expanduser("~\\.aws\\credentials")
 aws_creds = configparser.ConfigParser()
@@ -25,9 +30,9 @@ S3_OUTPUT_DIR         = main_config.get("S3","S3_OUTPUT_DIR")
 DB_NAME               = main_config.get("DB","DB_NAME")
 
 # AWS CREDENTIALS & CONFIG
-KEY                   = aws_creds.get("default", "aws_access_key_id")
-SECRET                = aws_creds.get("default", "aws_secret_access_key")
-REGION                = aws_config.get("default", "region")
+KEY                   = aws_creds.get("default","aws_access_key_id")
+SECRET                = aws_creds.get("default","aws_secret_access_key")
+REGION                = aws_config.get("default","region")
 
 print("**********************************************")
 print("Establishing boto3 resources and clients...")
@@ -204,32 +209,17 @@ except Exception as e:
 print("**********************************************")
 print("Updating local .aws/config file with Role ARN")
 
-try:
-    aws_config["profile Redshift"]
-    print("Role ARN already exists in .aws/config")
+aws_profile = "profile Redshift"
+aws_config_key = "role_arn"
+role_arn = iam_client.get_role(RoleName=IAM_ROLE_NAME)['Role']['Arn']
 
-    IAM_ROLE_ARN = aws_config.get("profile Redshift","role_arn")
-    
-except:
-    try:
-        role_arn = iam_client.get_role(RoleName=IAM_ROLE_NAME)['Role']['Arn']
-
-        aws_config_override = configparser.ConfigParser()
-        aws_config_override.read(aws_config_path)
-
-        aws_config_override["profile Redshift"] = {"role_arn": role_arn}
-        
-        with open(aws_config_path, "w") as configfile:
-            aws_config_override.write(configfile)
-            
-        print("Role ARN added to .aws/config ")
-
-        aws_config.read(aws_config_path)
-
-        IAM_ROLE_ARN = aws_config.get("profile Redshift","role_arn")
-
-    except Exception as e:
-        print(e)
+modify_config_file(
+    config_file=aws_config_path,
+    config_obj=aws_config,
+    config_section=aws_profile,
+    config_key=aws_config_key,
+    config_val=role_arn
+)
 
 print("**********************************************")
 print("Creating Glue database...")
